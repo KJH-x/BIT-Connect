@@ -1,0 +1,6 @@
+*.7z
+*.log
+*.json
+log/*
+__pycache__
+.vscode
