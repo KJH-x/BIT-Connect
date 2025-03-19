@@ -273,7 +273,7 @@ def main_loop() -> None:
 
 
 PING_TARGET = 'bilibili.com'
-VERSION = 'v1.2.0'
+VERSION = 'v1.2.1'
 aio_path = sys.path[0]
 START_TIME = datetime.now()
 welcome_msg = f"""
@@ -281,7 +281,7 @@ welcome_msg = f"""
 [INFO] 欢迎使用校园网自动重连脚本
 ---------------------------------------------------------------------
 | 当前版本{VERSION}，访问Github仓库以获取最新版脚本
-| https://github.com/
+| https://github.com/KJH-x/BIT-Connect/
 ---------------------------------------------------------------------
 | 在判定期间可通过[Ctrl+C]跳过并强制重新登陆，
 | 在睡眠期间可通过[Ctrl+C]打断睡眠开始下一轮ping
