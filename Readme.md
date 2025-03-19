@@ -1,6 +1,6 @@
-<!-- <p align="center">
+<p align="center">
   <img src="https://github.com/KJH-x/BIT-Connect/blob/main/Network_Alive.ico" alt="Icon">
-</p> -->
+</p>
 
 # 校园网脚本食用方法
 
@@ -10,7 +10,7 @@
 
 1. 安装[python](https://www.python.org/downloads/)：
 
-2. 下载[`Campus_network.7z`]并解压或者`git clone`
+2. 去[release](https://github.com/KJH-x/BIT-Connect/releases/)下载[`Campus_network.7z(v1.2.0)`](https://github.com/KJH-x/BIT-Connect/releases/download/v1.2.0/BitConnected.7z)并解压或者`git clone`
 
 3. 安装python依赖（在解压后的文件夹地址栏输入cmd，复制以下内容粘贴运行）
 
@@ -55,8 +55,8 @@ Register-ScheduledTask -Action (New-ScheduledTaskAction -Execute $executable_pat
     - 你可以随时删除，并在下一次登陆的时候重新输入账号密码
     - 注意，自动重连依赖于账号密码的保存
 
-4. 因为身边没有用macos/linux的，也没有经验，故不确定是否支持
+4. macos/linux的请使用bitsrun，不支持
 5. 欢迎Issue可能的bug
-6. 感谢网协某位同学提供的 `pystray` 思路
+6. 感谢 `pystray` 思路
 7. ...
 8. 本代码参加了北京理工大学第一届“十行代码”挑战赛
