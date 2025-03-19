@@ -38,6 +38,8 @@ Register-ScheduledTask -Action (New-ScheduledTaskAction -Execute $executable_pat
 
 ## 运行截图
 
+![20250319180200.png](./20250319180200.png)
+
 ## 冷知识
 
 1. 参数：
@@ -60,3 +62,8 @@ Register-ScheduledTask -Action (New-ScheduledTaskAction -Execute $executable_pat
 6. 感谢 `pystray` 思路
 7. ...
 8. 本代码参加了北京理工大学第一届“十行代码”挑战赛
+
+## 什么，你还需要IPv6？
+
+下载/ipv6_tools的两个脚本，将`重启v6.v1.2.1.ps1`拖拽到`runwith.UAC_pwsh.bat`(没错，是拖拽而不是其他打开方法)
+然后跟随脚本指示排除问题，如果有进一步问题请+咨询群询问。
