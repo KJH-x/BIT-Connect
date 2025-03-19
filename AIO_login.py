@@ -75,8 +75,7 @@ def report_time() -> str:
     return datetime.now().strftime(TLF)
 
 
-# 将配置文件路径定义为常量
-CONFIG_PATH = ".\\BITer.json"
+CONFIG_PATH = "./BITer.json"
 
 
 def read_config() -> tuple[str, str]:

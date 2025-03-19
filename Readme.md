@@ -30,10 +30,22 @@
 
 5. 添加到计划任务
 
-```powershell
-$executable_path="脚本完整路径"
+在文件管理器的上方选项卡中，点击`复制路径`
+右键windows开始图标（或使用<kbd>Win</kbd>+<kbd>x</kbd>），点击 Windows Powershell(管理员)(<u>A</u>)
 
-Register-ScheduledTask -Action (New-ScheduledTaskAction -Execute $executable_path) -Trigger (New-ScheduledTaskTrigger -AtLogon) -Settings (New-ScheduledTaskSettingsSet -NetworkId "BIT-web" -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -MultipleInstances IgnoreNew -DontStopOnIdleEnd -ExecutionTimeLimit 0) -Principal (New-ScheduledTaskPrincipal -UserId $Env:UserName -LogonType Interactive) -TaskName "BIT-Connect" -Description "BIT-Web 的自动重连"
+```powershell
+$script_path="改成你的路径/Start.tray.pyw"
+$python_path=(Get-Command pythonw).Source #如果你用了conda等，那你可能需要指定安装了相应依赖的环境pythonw路径，此处默认自动获取path的pythonw(无窗口的python解释器)
+```
+
+```powershell
+Register-ScheduledTask -Action (New-ScheduledTaskAction -Execute $python_path -Argument $script_path)   -Trigger (New-ScheduledTaskTrigger -AtLogon) -Settings (New-ScheduledTaskSettingsSet -NetworkId "BIT-web" -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -MultipleInstances IgnoreNew -DontStopOnIdleEnd -ExecutionTimeLimit 0) -Principal (New-ScheduledTaskPrincipal -UserId $Env:UserName -LogonType Interactive) -TaskName "BIT-Connect" -Description "BIT-Web 的自动重连"
+```
+
+如需停用，以同样的方法执行
+
+```powershell
+Unregister-ScheduledTask -TaskName "BIT-Connect" -Confirm:$false
 ```
 
 ## 运行截图
