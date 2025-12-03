@@ -10,32 +10,23 @@
 
 1. 安装[python](https://www.python.org/downloads/)：
 
-2. 去[release](https://github.com/KJH-x/BIT-Connect/releases/)下载[`Campus_network.7z(v1.2.0)`](https://github.com/KJH-x/BIT-Connect/releases/download/v1.2.0/BitConnected.7z)并解压或者`git clone`
+2. 去[release](https://github.com/KJH-x/BIT-Connect/releases/)下载并解压 或者 使用`git clone`
 
 3. 安装python依赖（在解压后的文件夹地址栏输入cmd，复制以下内容粘贴运行）
 
-    > ```batch
-    > pip install -r requirements.txt
-    > ```
+```bash
+pip install -r requirements.txt
+```
 
-4. 运行脚本
-    - 开始自动重连：
-        1. 双击运行BITConnect_tray.pyw
-        2. 按照提示输入账号密码，请确保正确，可以在登出的情况下运行以确保登录信息有效
-        3. 挂机
-        4. 通过在任务栏托盘处找到图标，右键切换控制台现实情况
-    - 只想用来登录、登出（命令行）
-        1. `python AIO_login.py -a 登录`（或‘登出’）
-        2. 按照提示输入账号密码
-
-5. 添加到计划任务
+### 添加到计划任务(推荐)
 
 在文件管理器的上方选项卡中，点击`复制路径`
 右键windows开始图标（或使用<kbd>Win</kbd>+<kbd>x</kbd>），点击 Windows Powershell(管理员)(<u>A</u>)
 
 ```powershell
 $script_path="改成你的路径/Start.tray.pyw"
-$python_path=(Get-Command pythonw).Source #如果你用了conda等，那你可能需要指定安装了相应依赖的环境pythonw路径，此处默认自动获取path的pythonw(无窗口的python解释器)
+$python_path=(Get-Command pythonw).Source
+#如果你用了conda等，那你可能需要指定安装了相应依赖的环境pythonw路径，此处默认自动获取path的pythonw(无窗口的python解释器)
 ```
 
 ```powershell
@@ -47,6 +38,17 @@ Register-ScheduledTask -Action (New-ScheduledTaskAction -Execute $python_path -A
 ```powershell
 Unregister-ScheduledTask -TaskName "BIT-Connect" -Confirm:$false
 ```
+
+### 直接运行脚本
+
+- 开始自动重连：
+    1. 双击运行 Start.tray.pyw （如果提示是用什么软件打开请你选择python目录下的pythonw.exe）
+    2. 按照提示输入账号密码，请确保正确，可以在登出的情况下运行以确保登录信息有效
+    3. 挂机
+    4. 通过在任务栏托盘处找到图标，右键切换控制台现实情况
+- 只想用来登录、登出（命令行）
+    1. `python AIO_login.py -a 登录`（或‘登出’）
+    2. 按照提示输入账号密码
 
 ## 运行截图
 
