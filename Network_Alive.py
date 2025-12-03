@@ -62,7 +62,7 @@ def wait_for_keypress(msg: str) -> None:
 
     Args:
         msg: 要显示的消息
-    
+
     Returns:
         None
     """
@@ -131,7 +131,7 @@ def relogin(interval: int = 2) -> None:
 
     Args:
         interval: 操作之间的等待时间(秒)。默认为2秒。
-    
+
     Returns:
         None
     """
@@ -139,17 +139,17 @@ def relogin(interval: int = 2) -> None:
         operation(0)
     except KeyboardInterrupt:
         logger.info("登出期间用户中断，继续执行")
-    
+
     try:
         time.sleep(interval)
     except KeyboardInterrupt:
         logger.info("等待期间用户中断，继续执行")
-    
+
     try:
         operation(1)
     except KeyboardInterrupt:
         logger.info("登入期间用户中断，继续执行")
-    
+
     try:
         time.sleep(interval)
     except KeyboardInterrupt:
@@ -162,7 +162,7 @@ def summary(statistic: dict[str, int], fail_log: list[tuple[int, str]]) -> None:
     Args:
         statistic: 包含各类操作计数的字典
         fail_log: 失败记录列表，每个元素为(日期, 时间)的元组
-    
+
     Returns:
         None
     """
@@ -212,22 +212,25 @@ def check_component() -> bool:
             False: 存在不可用组件
     """
     global aio_path, ping_target, ping_interval
-    
+
     if os.access(f"{aio_path}/AIO_login.py", os.R_OK):
         # Load ping configuration from BITer.json if available
+        config_path = os.path.join(aio_path, "BITer.json")
         try:
-            config_path = os.path.join(aio_path, "BITer.json")
-            if os.path.exists(config_path):
-                with open(config_path, "r", encoding="utf8") as f:
-                    config:dict[str,str] = json.load(f)
-                    ping_target = config.get("ping_target", DEFAULT_PING_TARGET)
-                    ping_interval = int(config.get("ping_interval", DEFAULT_PING_INTERVAL))
-                    logger.debug(f"Loaded config: ping_target={ping_target}, ping_interval={ping_interval}")
+            with open(config_path, "r", encoding="utf8") as f:
+                config: dict[str, str] = json.load(f)
+                ping_target = config.get("ping_target", DEFAULT_PING_TARGET)
+                ping_interval = int(config.get("ping_interval", DEFAULT_PING_INTERVAL))
+                logger.debug(f"Loaded config: ping_target={ping_target}, ping_interval={ping_interval}")
+        except FileNotFoundError:
+            logger.info(f"Config file not found at {config_path}. Creating new config.")
+            AIO_login.write_config()
         except (json.JSONDecodeError, IOError) as e:
+            AIO_login.write_config()
             logger.warning(f"Failed to load ping config: {e}, using defaults")
             ping_target = DEFAULT_PING_TARGET
             ping_interval = DEFAULT_PING_INTERVAL
-        
+
         return True
     else:
         logger.warning(f"在\"{aio_path}\"")
