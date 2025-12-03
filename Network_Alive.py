@@ -118,6 +118,9 @@ def operation(operation: Literal[0, 1]) -> int:
 
             case _:
                 return -1
+    except AIO_login.AlreadyLoggedOutException as e:
+        logger.info(f"登出状态: {e}")
+        return 0
     except Exception as e:
         logger.exception(f"操作执行失败: {e}")
         return -1
@@ -132,10 +135,25 @@ def relogin(interval: int = 2) -> None:
     Returns:
         None
     """
-    operation(0)
-    time.sleep(interval)
-    operation(1)
-    time.sleep(interval)
+    try:
+        operation(0)
+    except KeyboardInterrupt:
+        logger.info("登出期间用户中断，继续执行")
+    
+    try:
+        time.sleep(interval)
+    except KeyboardInterrupt:
+        logger.info("等待期间用户中断，继续执行")
+    
+    try:
+        operation(1)
+    except KeyboardInterrupt:
+        logger.info("登入期间用户中断，继续执行")
+    
+    try:
+        time.sleep(interval)
+    except KeyboardInterrupt:
+        logger.info("等待期间用户中断，继续执行")
 
 
 def summary(statistic: dict[str, int], fail_log: list[tuple[int, str]]) -> None:
@@ -267,6 +285,11 @@ def main_loop() -> None:
                 relogin()
                 continue
 
+            except subprocess.TimeoutExpired:
+                logger.info("ping 超时：判定离线")
+                t2 = t1 + 5
+                pass
+
             except subprocess.CalledProcessError:
                 logger.info(f"Expected Error: return_not_zero")
                 t2 = t1 + 5
@@ -287,13 +310,16 @@ def main_loop() -> None:
 
                 if (statistic["失败"] + statistic["成功"] + statistic["强制"]) % 5 == 0:
                     summary(statistic, fail_log)
-                logger.info(f"休眠{ping_interval}秒， [Ctrl+C] 跳过休眠")
+                logger.info(f"休眠{ping_interval}秒， [Ctrl+C] 强制重登")
 
                 try:
                     time.sleep(ping_interval)
                 except KeyboardInterrupt:
-                    statistic['跳过'] += 1
-                    logger.info("用户 跳过休眠")
+                    logger.info("[USER] [Ctrl+C] 强制重登")
+                    statistic['强制'] += 1
+                    time.sleep(0.2)
+                    sys.stdout.write('\r\033[K')
+                    relogin()
                     continue
         except Exception as e:
             logger.exception(f"An exception occurred: {e}")
@@ -302,7 +328,7 @@ def main_loop() -> None:
 
 
 ping_target: str = DEFAULT_PING_TARGET
-VERSION = 'v1.3.0'
+VERSION = 'v1.3.1'
 aio_path = sys.path[0]
 START_TIME = datetime.now()
 welcome_msg = f"""
