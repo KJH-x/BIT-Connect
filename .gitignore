@@ -1,7 +1,7 @@
 *.7z
 *.log
 *.json
-log/*
+logs/*
 __pycache__
 .vscode
 *.ps1

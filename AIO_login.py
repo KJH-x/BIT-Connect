@@ -5,26 +5,20 @@ import json
 import math
 import os
 import re
-import subprocess
 import sys
-import time
 from base64 import b64encode
 from datetime import datetime
 from enum import Enum
 from getpass import getpass
 from hashlib import sha1
 from html.parser import HTMLParser
-from typing import Dict
+from typing import Any, Optional
 from urllib.parse import parse_qs, urlparse
 
 import requests
 from requests import Session
 
 import log
-
-mirror_url = "https://pypi.tuna.tsinghua.edu.cn/simple"
-module_name = "requests"
-
 
 logger = log.setup_logger()
 
@@ -63,7 +57,7 @@ class UnreachableError(SyntaxError):
     """Branch that should not be reached
     """
 
-    def __init__(self, msg):
+    def __init__(self, msg:str):
         self.msg = msg
 
     def __str__(self):
@@ -105,7 +99,7 @@ def write_config() -> tuple[str, str]:
         - tuple[str, str]: (username, password)
     """
     with open(CONFIG_PATH, "w", encoding="utf8") as config_file:
-        username = getpass(f" - 请输入账号(你不会看到输入的内容):")
+        username = input(f" - 请输入账号:")
         password = getpass(f" - 请输入密码(你不会看到输入的内容):",)
         config_file.write(
             f"{{\"username\":\"{username}\",\"password\":\"{password}\"}}"
@@ -218,11 +212,14 @@ class User:
         else:
             return ""
 
-    def _make_params(self, action: Action) -> dict:
+    def _make_params(self, action: Action) -> dict[str, Any]:
         """制作请求参数
 
+        Args:
+            action: Action enum specifying operation type
+
         Returns:
-            - dict: params
+            dict[str, str]: Request parameters
         """
         token = self._get_token()
 
@@ -264,15 +261,14 @@ class User:
         return params
 
 
-def parse_homepage():
+def parse_homepage() -> tuple[str, str]:
     """解析并获取ip与acid
 
     Raises:
-        - Exception: Throw exception if acid not present in the redirected URL
-        - Exception: Throw exception if response text does not contain IP
+        Exception: If acid not in redirected URL or IP not in response
 
     Returns:
-        - tuple[str, str]: ip, ac_id
+        tuple[str, str]: (ip, ac_id)
     """
 
     res = requests.get(API_BASE)
@@ -286,22 +282,22 @@ def parse_homepage():
 
     # ip appears in the response HTML
     class IPParser(HTMLParser):
-        def __init__(self, *args, **kwargs):
+        def __init__(self, *args:str, **kwargs:dict[str, list[str]]):
             super().__init__(*args, **kwargs)
             self.ip = None
 
-        def handle_starttag(self, tag, attrs):
-            if tag == "input":
-                attr_dict = dict(attrs)
-                if attr_dict.get("name") == "user_ip":
-                    self.ip = attr_dict["value"]
+        def handle_starttag(self, tag: str, attrs: list[tuple[str, Optional[str]]]) -> None:
+                if tag == "input":
+                    attr_dict: dict[str, Optional[str]] = dict(attrs)
+                    if attr_dict.get("name") == "user_ip":
+                        self.ip = attr_dict.get("value")
 
-        def feed(self, *args, **kwargs):
+        def get_ip(self, *args:str, **kwargs:dict[str, list[str]])->Optional[str]:
             super().feed(*args, **kwargs)
-            return self.ip
+            return self.ip or None
 
     parser = IPParser()
-    ip = parser.feed(res.text)
+    ip = parser.get_ip(res.text)
 
     if not ip:
         raise Exception("failed to get ip")
@@ -309,11 +305,11 @@ def parse_homepage():
     return ip, ac_id[0]
 
 
-def get_user_info():
+def get_user_info() -> tuple[bool, str | None]:
     """获取当前登录用户信息
 
     Returns:
-        - tuple[bool, str|None]: is_logged_in, username
+        tuple[bool, str | None]: (is_logged_in, username)
     """
 
     is_logged_in = True
@@ -344,7 +340,7 @@ def fkbase64(raw_s: str) -> str:
     return ret.decode().translate(trans)
 
 
-def xencode(msg, key):
+def xencode(msg:str, key:str):
     """加密算法，用于网络认证过程中的数据加密
 
     该函数包含两个内部函数：
@@ -358,14 +354,14 @@ def xencode(msg, key):
     Returns:
         str: 加密后的字符串
     """
-    def sencode(msg, key):
-        def ordat(msg, idx):
+    def sencode(msg:str, key:bool):
+        def ordat(msg:str, idx:int):
             if len(msg) > idx:
                 return ord(msg[idx])
             return 0
 
         msg_len = len(msg)
-        pwd = []
+        pwd:list[int] = []
         for i in range(0, msg_len, 4):
             pwd.append(ordat(msg, i) | ordat(msg, i + 1) << 8 |
                        ordat(msg, i + 2) << 16 | ordat(msg, i + 3) << 24)
@@ -373,20 +369,25 @@ def xencode(msg, key):
             pwd.append(msg_len)
         return pwd
 
-    def lencode(msg, key):
-        msg_len = len(msg)
-        ll = (msg_len - 1) << 2
+    def lencode(msg: list[int], key: bool) -> str:
+        msg_len: int = len(msg)
+        ll: int = (msg_len - 1) << 2
         if key:
-            m = msg[msg_len - 1]
+            m: int = msg[msg_len - 1]
             if m < ll - 3 or m > ll:
                 return ""
             ll = m
-        for i in range(0, msg_len):
-            msg[i] = chr(msg[i] & 0xFF) + chr(msg[i] >> 8 & 0xFF) + \
-                chr(msg[i] >> 16 & 0xFF) + chr(msg[i] >> 24 & 0xFF)
+        str_parts: list[str] = []
+        for num in msg:
+            byte0: str = chr(num & 0xFF)
+            byte1: str = chr((num >> 8) & 0xFF)
+            byte2: str = chr((num >> 16) & 0xFF)
+            byte3: str = chr((num >> 24) & 0xFF)
+            str_parts.append(byte0 + byte1 + byte2 + byte3)
+        full_str: str = "".join(str_parts)
         if key:
-            return "".join(msg)[0:ll]
-        return "".join(msg)
+            return full_str[0:ll]
+        return full_str
 
     if msg == "":
         return ""
@@ -429,13 +430,13 @@ def traffic_query() -> dict[str, str]:
     """当且仅当登陆成功后请求此jQuery来获取详细信息
 
     Returns:
-        - QueryDetail: query_result
+        dict[str, str]: Query result with traffic and balance details
     """
     query_url = f"{API_BASE}/cgi-bin/rad_user_info?callback=1677774013868"
-    user_detail: Dict[str, str] = dict(json.loads(re.findall(
+    user_detail: dict[str, str] = dict(json.loads(re.findall(
         r"\{[\s\S]*\}", requests.get(url=query_url).text)[0]))
 
-    query_result: Dict[str, str] = {}
+    query_result: dict[str, str] = {}
     query_result['time_online'] = user_detail.get('sum_seconds', "")
     query_result['traffic_remain'] = user_detail.get('remain_bytes', "")
     query_result['traffic_used'] = user_detail.get('sum_bytes', "")
@@ -498,6 +499,14 @@ class Operation:
     #         return False
 
     def config(self, action: str) -> None:
+        """Manage configuration file operations.
+        
+        Args:
+            action: Configuration action ('chkjson', 'mkjson', or 'clear')
+        
+        Returns:
+            None
+        """
         if action == "chkjson":
             read_config()
         elif action == "mkjson":

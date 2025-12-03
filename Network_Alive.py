@@ -3,6 +3,7 @@
 # Network_Alive
 
 # import logger
+import json
 import msvcrt
 import os
 import subprocess
@@ -15,6 +16,13 @@ import AIO_login
 import log
 
 logger = log.setup_logger()
+
+
+# Configuration constants (can be overridden in BITer.json)
+DEFAULT_PING_TARGET: str = 'bilibili.com'
+DEFAULT_PING_INTERVAL: int = 1  # seconds
+ping_target: str = DEFAULT_PING_TARGET
+ping_interval: int = DEFAULT_PING_INTERVAL
 
 
 class UnreachableError(SyntaxError):
@@ -53,7 +61,10 @@ def wait_for_keypress(msg: str) -> None:
     """显示消息并等待用户按键。
 
     Args:
-        msg (str): 要显示的消息
+        msg: 要显示的消息
+    
+    Returns:
+        None
     """
     logger.info(msg)
     msvcrt.getch()
@@ -80,16 +91,14 @@ def operation(operation: Literal[0, 1]) -> int:
     """执行AIO脚本的各种操作。
 
     Args:
-        operation (int): 操作类型
+        operation: 操作类型
             0: 登出操作
             1: 登录操作
-            2: 验证操作
 
     Returns:
         int: 操作的返回码
-            2: 脚本丢失
-            14: 需要创建配置文件
-            其他值: 具体操作的返回状态
+            0: 成功
+            -1: 失败
     """
     global aio_handler
     try:
@@ -118,7 +127,10 @@ def relogin(interval: int = 2) -> None:
     """执行重新登录操作，包含登出和登录两个步骤。
 
     Args:
-        interval (int, optional): 操作之间的等待时间(秒)。默认为2秒。
+        interval: 操作之间的等待时间(秒)。默认为2秒。
+    
+    Returns:
+        None
     """
     operation(0)
     time.sleep(interval)
@@ -130,8 +142,11 @@ def summary(statistic: dict[str, int], fail_log: list[tuple[int, str]]) -> None:
     """显示程序运行的统计信息和失败日志。
 
     Args:
-        statistic (dict[str, int]): 包含各类操作计数的字典
-        fail_log (list[tuple[int, str]]): 失败记录列表，每个元素为(日期, 时间)的元组
+        statistic: 包含各类操作计数的字典
+        fail_log: 失败记录列表，每个元素为(日期, 时间)的元组
+    
+    Returns:
+        None
     """
     os.system("cls")
     rpd = date_log()
@@ -171,15 +186,30 @@ def entrance_protect() -> bool:
 
 
 def check_component() -> bool:
-    """检查程序依赖组件是否可用。
+    """检查程序依赖组件是否可用，并加载配置文件中的ping设置。
 
     Returns:
         bool: 所有必需组件是否都可用
             True: 所有组件可用
             False: 存在不可用组件
     """
-    global aio_path
+    global aio_path, ping_target, ping_interval
+    
     if os.access(f"{aio_path}/AIO_login.py", os.R_OK):
+        # Load ping configuration from BITer.json if available
+        try:
+            config_path = os.path.join(aio_path, "BITer.json")
+            if os.path.exists(config_path):
+                with open(config_path, "r", encoding="utf8") as f:
+                    config:dict[str,str] = json.load(f)
+                    ping_target = config.get("ping_target", DEFAULT_PING_TARGET)
+                    ping_interval = int(config.get("ping_interval", DEFAULT_PING_INTERVAL))
+                    logger.debug(f"Loaded config: ping_target={ping_target}, ping_interval={ping_interval}")
+        except (json.JSONDecodeError, IOError) as e:
+            logger.warning(f"Failed to load ping config: {e}, using defaults")
+            ping_target = DEFAULT_PING_TARGET
+            ping_interval = DEFAULT_PING_INTERVAL
+        
         return True
     else:
         logger.warning(f"在\"{aio_path}\"")
@@ -220,27 +250,25 @@ def main_loop() -> None:
     statistic = {'失败': 0, '成功': 0, '强制': 0, '跳过': 0}
     fail_log: list[tuple[int, str]] = []  # 失败日志列表
     t1, t2 = 0.0, 0.0  # 用于记录ping操作的开始时间和结束时间
-    command = ["ping", PING_TARGET, "-n", "2"]  # ping命令的参数列表
+    command = ["ping", ping_target, "-n", "2"]  # ping命令的参数列表
     while True:
         try:
-            logger.info(f"正在ping {PING_TARGET}, [Ctrl+C] 强制重登")
+            logger.info(f"正在ping {ping_target}, [Ctrl+C] 强制重登")
             try:
                 t1 = time.time()
-                subprocess.run(command, stdout=subprocess.DEVNULL, check=True)
+                subprocess.run(command, stdout=subprocess.DEVNULL, check=True, timeout=5)
                 t2 = time.time()
 
-            except KeyboardInterrupt as e:
-                logger.exception(f"An exception occurred: {e}")
-                statistic['强制'] += 1
+            except KeyboardInterrupt:
                 logger.info("[USER] [Ctrl+C] 强制重登")
+                statistic['强制'] += 1
                 time.sleep(0.2)
                 sys.stdout.write('\r\033[K')
                 relogin()
                 continue
 
-            except subprocess.CalledProcessError as e:
+            except subprocess.CalledProcessError:
                 logger.info(f"Expected Error: return_not_zero")
-                logger.exception(f"An exception occurred: {e}")
                 t2 = t1 + 5
                 pass
 
@@ -259,21 +287,22 @@ def main_loop() -> None:
 
                 if (statistic["失败"] + statistic["成功"] + statistic["强制"]) % 5 == 0:
                     summary(statistic, fail_log)
-                logger.info("休眠一分钟， [Ctrl+C] 跳过休眠")
+                logger.info(f"休眠{ping_interval}秒， [Ctrl+C] 跳过休眠")
 
-                time.sleep(60)
-        except KeyboardInterrupt as e:
-            statistic['跳过'] += 1
-            logger.info("用户 跳过休眠")
-            continue
+                try:
+                    time.sleep(ping_interval)
+                except KeyboardInterrupt:
+                    statistic['跳过'] += 1
+                    logger.info("用户 跳过休眠")
+                    continue
         except Exception as e:
             logger.exception(f"An exception occurred: {e}")
             print()
             raise e
 
 
-PING_TARGET = 'bilibili.com'
-VERSION = 'v1.2.1'
+ping_target: str = DEFAULT_PING_TARGET
+VERSION = 'v1.3.0'
 aio_path = sys.path[0]
 START_TIME = datetime.now()
 welcome_msg = f"""
